@@ -461,7 +461,13 @@ const parseKey=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,
 const todayKey=()=>keyOf(new Date());
 const addDays=(k,n)=>{const d=parseKey(k);d.setDate(d.getDate()+n);return keyOf(d)};
 const wd=k=>(parseKey(k).getDay()+6)%7;
-const mondayOf=k=>addDays(k,-wd(k));
+/* settimana della cannabis: inizia nel giorno scelto (0 = lunedì … 6 = domenica) */
+const wsDay=()=>{const v=typeof D!=='undefined'&&D&&D.weed?+D.weed.weekStart:0;return v>=0&&v<=6?v:0};
+const widx=k=>(wd(k)-wsDay()+7)%7;
+const wkStart=k=>addDays(k,-widx(k));
+const weekRange=()=>'da '+DLONG[wsDay()].toLowerCase()+' a '+DLONG[(wsDay()+6)%7].toLowerCase();
+/* un tetto salvato con un altro giorno d'inizio vale dalla settimana con l'inizio più vicino */
+function effStart(d){const f=wkStart(d);return diffDays(f,d)<=3?f:addDays(f,7)}
 const diffDays=(a,b)=>Math.round((parseKey(b)-parseKey(a))/86400000);
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
 const nowLocal=()=>{const d=new Date();return keyOf(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes())};
@@ -495,7 +501,7 @@ const fmtG=g=>r2(+g||0).toLocaleString('it-IT',{maximumFractionDigits:2})+' g';
 const fmtGn=g=>r2(+g||0).toLocaleString('it-IT',{maximumFractionDigits:2});
 
 /* ---------- dati (salvati nel browser di questo dispositivo) ---------- */
-function normWeed(w){w=obj(w);return {plan:arr(w.plan),log:arr(w.log),urges:arr(w.urges),defaultGrams:isFinite(+w.defaultGrams)&&+w.defaultGrams>0?+w.defaultGrams:0.3,showOnToday:w.showOnToday!==false}}
+function normWeed(w){w=obj(w);return {weekStart:+w.weekStart>=0&&+w.weekStart<=6?+w.weekStart:0,plan:arr(w.plan),log:arr(w.log),urges:arr(w.urges),defaultGrams:isFinite(+w.defaultGrams)&&+w.defaultGrams>0?+w.defaultGrams:0.3,showOnToday:w.showOnToday!==false}}
 function normData(d){d=obj(d);return {v:2,routine:arr(d.routine),reqs:arr(d.reqs),events:arr(d.events),goals:arr(d.goals),courses:arr(d.courses),weed:normWeed(d.weed),days:obj(d.days),meta:obj(d.meta)}}
 function loadData(){try{const r=localStorage.getItem(LS_KEY);if(r)return normData(JSON.parse(r))}catch(e){}return null}
 function seedData(){
@@ -531,7 +537,7 @@ function commit(){if(D.days[S.date])snapshot(S.date);persist()}
 /* ---------- stato ---------- */
 const S={day:emptyDay(),date:todayKey(),tab:'oggi',prevLeft:null,goalFilter:'attivi',lastPct:null,
   hist:{mode:'giorni',cat:'giornata',y:new Date().getFullYear(),m:new Date().getMonth()},
-  openCourses:new Set(),tmCourse:null,tmDur:25,weekMon:mondayOf(todayKey())};
+  openCourses:new Set(),tmCourse:null,tmDur:25,weekMon:wkStart(todayKey())};
 let C={};/* cache dei calcoli, svuotata a ogni render */
 
 function saveItem(kind,item){
@@ -600,8 +606,8 @@ function nextTopic(){const rv=toReview();if(rv.length)return {c:rv[0].c,t:rv[0].
   for(const c of activeCourses()){const t=arr(c.topics).find(x=>!x.studied);if(t)return {c,t,kind:'studio'}}return null}
 
 /* ---------- calcoli: cannabis ---------- */
-function planSorted(){return arr(D.weed.plan).slice().sort((a,b)=>String(a.week).localeCompare(String(b.week)))}
-function limitFor(mon){let l=null;planSorted().forEach(p=>{if(p.week<=mon)l=+p.grams});return l}
+function planSorted(){return arr(D.weed.plan).map(p=>({...p,eff:effStart(String(p.week))})).sort((a,b)=>a.eff.localeCompare(b.eff))}
+function limitFor(mon){let l=null;planSorted().forEach(p=>{if(p.eff<=mon)l=+p.grams});return l}
 function weedByDay(){if(C.wbd)return C.wbd;const m={};D.weed.log.forEach(e=>{m[e.date]=(m[e.date]||0)+(+e.grams||0)});return C.wbd=m}
 /* il tetto è per settimana (lun–dom): la quota di ogni giorno = quanto resta diviso i giorni che mancano */
 function weedWeek(mon){C.ww=C.ww||{};if(C.ww[mon])return C.ww[mon];
@@ -610,8 +616,8 @@ function weedWeek(mon){C.ww=C.ww||{};if(C.ww[mon])return C.ww[mon];
     const status=limit==null?'none':(u>0&&used>limit+1e-9)?'red':(u>allow+1e-9)?'orange':(u>0?'ok':'zero');
     days.push({k,u,allow,status,cum:used})}
   return C.ww[mon]={mon,limit,used,days}}
-function weedDay(k){return weedWeek(mondayOf(k)).days[wd(k)]}
-function weedStart(){const p=planSorted();return p.length?p[0].week:null}
+function weedDay(k){return weedWeek(wkStart(k)).days[widx(k)]}
+function weedStart(){const p=planSorted();return p.length?p[0].eff:null}
 function weedCellCls(d){return d.status==='none'?'':'w-'+d.status}
 function weedPct(d){if(d.limit===null||d.allow==null)return null;if(d.allow<=0)return d.u>0?null:0;return d.u/d.allow}
 
@@ -697,7 +703,7 @@ function studyMini(){
   return '<section class="card stack-s"><div class="sec-head" style="margin:0"><h2>Studio</h2><button class="btn small" data-act="tab" data-tab="studio">Apri</button></div>'+studyHead(S.date)+body+'</section>';
 }
 function weedSummary(k,compact,weekOnly){
-  const d=weedDay(k);const ww=weedWeek(mondayOf(k));if(ww.limit==null)return '';
+  const d=weedDay(k);const ww=weedWeek(wkStart(k));if(ww.limit==null)return '';
   const left=Math.max(0,d.allow-d.u);const rest=ww.limit-ww.used;
   const cls=d.status==='red'?'red':d.status==='orange'?'orange':left<=0?'zero':'';
   let h=weekOnly?'':'<div class="wbig '+cls+'"><span class="eyebrow">Oggi puoi ancora</span><b>'+fmtG(left)+'</b><span class="muted num">quota di oggi '+fmtG(d.allow)+' · usato oggi '+fmtG(d.u)+'</span></div>';
@@ -847,17 +853,17 @@ function courseCard(c){
 
 /* ---------- cannabis ---------- */
 function renderWeed(){
-  const tk=todayKey();const plan=planSorted();const curMon=mondayOf(tk);const mon=S.weekMon>curMon?curMon:S.weekMon;
+  const tk=todayKey();const plan=planSorted();const curMon=wkStart(tk);const mon=S.weekMon>curMon?curMon:S.weekMon;
   let h='<div class="sec-head" style="flex-wrap:wrap"><h1 class="page-h">Cannabis</h1><div class="btnrow"><button class="btn primary" data-act="weed-new">+ Segna una canna</button><button class="btn" data-act="urge-new">Ho resistito</button></div></div>';
   if(!plan.length){
-    h+='<section class="card stack-s"><h2>Imposta il tuo percorso</h2><p class="note" style="margin:0">Scegli il massimo di grammi per settimana (da lunedì a domenica). Ogni giorno la scheda ti dice quanto puoi usare: se un giorno usi di più, la differenza viene tolta dai giorni che restano. Puoi cambiare la quantità da una settimana all\'altra.</p>'
+    h+='<section class="card stack-s"><h2>Imposta il tuo percorso</h2><p class="note" style="margin:0">Scegli il massimo di grammi per settimana ('+weekRange()+', puoi cambiare il giorno d\'inizio). Ogni giorno la scheda ti dice quanto puoi usare: se un giorno usi di più, la differenza viene tolta dai giorni che restano. Puoi cambiare la quantità da una settimana all\'altra.</p>'
       +'<div class="btnrow"><button class="btn primary" data-act="plan-new">Imposta il tetto settimanale</button><button class="btn" data-act="plan-grad">Piano graduale</button></div></section>';
   }else{
     const ww=weedWeek(mon);const isCur=mon===curMon;
     let strip='<div class="wstrip">'+ww.days.map((d,i)=>{const fut=d.k>tk;
-      const proj=fut&&ww.limit!=null?Math.max(0,(ww.limit-weedWeek(mon).days[wd(tk)].cum)/(6-wd(tk))):null;
+      const proj=fut&&isCur&&ww.limit!=null?Math.max(0,(ww.limit-ww.days[widx(tk)].cum)/(6-widx(tk))):null;
       const cls=fut?'fut':weedCellCls(d);
-      return '<button class="wday '+cls+(d.k===tk?' today':'')+'" data-act="dayinfo" data-k="'+d.k+'" aria-label="'+esc(longDate(d.k))+'"><span class="l">'+DSH[i]+'</span><span class="u">'+(fut?'·':fmtGn(d.u))+'</span><span class="a">max '+(ww.limit==null?'–':fmtGn(fut&&isCur?proj:d.allow))+'</span></button>'}).join('')+'</div>';
+      return '<button class="wday '+cls+(d.k===tk?' today':'')+'" data-act="dayinfo" data-k="'+d.k+'" aria-label="'+esc(longDate(d.k))+'"><span class="l">'+DSH[(wsDay()+i)%7]+'</span><span class="u">'+(fut?'·':fmtGn(d.u))+'</span><span class="a">max '+(ww.limit==null?'–':fmtGn(fut&&isCur?proj:d.allow))+'</span></button>'}).join('')+'</div>';
     h+='<section class="card stack-s"><div class="pnav"><button class="iconbtn" data-act="wprev" aria-label="Settimana precedente">'+IC.left+'</button><h2>'+(isCur?'Questa settimana':'Settimana')+'<br><span class="muted" style="font-size:15px;font-weight:600">'+esc(weekLabel(mon))+'</span></h2><button class="iconbtn" data-act="wnext" aria-label="Settimana successiva"'+(isCur?' disabled':'')+'>'+IC.right+'</button></div>'
       +(ww.limit==null?'<div class="empty">Nessun tetto impostato per questa settimana.</div>':(isCur?weedSummary(tk,false,false):weedSummary(addDays(mon,6),false,true)))
       +strip
@@ -896,12 +902,13 @@ function renderWeed(){
   // percorso
   h+='<section class="card"><div class="sec-head"><h2>Percorso</h2><div class="btnrow"><button class="btn small primary" data-act="plan-new">+ Tetto</button><button class="btn small" data-act="plan-grad">Piano graduale</button></div></div>';
   if(plan.length){h+='<p class="note" style="margin:0 0 10px">Ogni tetto vale dalla sua settimana in poi, finché non ne imposti uno nuovo.</p><div class="list">'
-    +plan.slice().reverse().map(p=>{const cur=p.week<=curMon&&!plan.some(q=>q.week>p.week&&q.week<=curMon);
-      return '<button class="setrow'+(cur?' cur':'')+'" data-act="plan-edit" data-id="'+esc(p.id)+'"><span class="bullet"></span><span class="txt"><span class="t num">'+fmtG(p.grams)+' a settimana</span><span class="m">dalla settimana '+esc(weekLabel(p.week))+(cur?' · in corso':p.week>curMon?' · in arrivo':'')+' · circa '+fmtG(p.grams/7)+' al giorno</span></span>'+IC.edit.replace('<svg','<svg aria-hidden="true"')+'</button>'}).join('')+'</div>'}
+    +plan.slice().reverse().map(p=>{const cur=p.eff<=curMon&&!plan.some(q=>q.eff>p.eff&&q.eff<=curMon);
+      return '<button class="setrow'+(cur?' cur':'')+'" data-act="plan-edit" data-id="'+esc(p.id)+'"><span class="bullet"></span><span class="txt"><span class="t num">'+fmtG(p.grams)+' a settimana</span><span class="m">dalla settimana '+esc(weekLabel(p.eff))+(cur?' · in corso':p.eff>curMon?' · in arrivo':'')+' · circa '+fmtG(p.grams/7)+' al giorno</span></span>'+IC.edit.replace('<svg','<svg aria-hidden="true"')+'</button>'}).join('')+'</div>'}
   else h+='<p class="muted" style="margin:0">Nessun tetto impostato.</p>';
   h+='</section>';
   h+='<section class="card stack-s"><h2 style="font-size:18px">Impostazioni</h2>'
     +'<label class="l" style="display:flex;flex-direction:column;gap:6px;font-weight:700">Quantità di una canna, se non la pesi <span class="note" style="font-weight:400">usata quando segni "non so"</span><input class="field" id="weed-def" inputmode="decimal" value="'+esc(fmtGn(D.weed.defaultGrams))+'" style="max-width:140px"></label>'
+    +weekStartField('weed-ws')
     +'<label class="checkline"><input type="checkbox" id="weed-today"'+(D.weed.showOnToday!==false?' checked':'')+'><span>Mostra il riquadro Cannabis nella pagina Oggi</span></label>'
     +'<p class="note" style="margin:0">Questi dati restano solo su questo telefono, come tutto il resto.</p></section>';
   $('#v-cannabis').innerHTML=h;
@@ -1194,10 +1201,10 @@ function weedFormVals(){const f=$('#f-weed');if(!f)return null;const fd=new Form
 function weedPreview(){
   const v=weedFormVals();const p=$('#w-prev');if(!v||!p)return;
   if(!isFinite(v.g)||v.g<0){p.className='preview';p.textContent='Scrivi i grammi o spunta "Non so".';return}
-  const mon=mondayOf(v.date);const limit=limitFor(mon);
+  const mon=wkStart(v.date);const limit=limitFor(mon);
   if(limit==null){p.className='preview';p.textContent='Nessun tetto per questa settimana: la canna viene solo registrata.';return}
   const m={};D.weed.log.forEach(e=>{if(e.id!==sheetCtx.weed)m[e.date]=(m[e.date]||0)+(+e.grams||0)});
-  let used=0,allow=0;const i=wd(v.date);for(let j=0;j<7;j++){const k=addDays(mon,j);if(j===i)allow=Math.max(0,(limit-used)/(7-j));used+=(m[k]||0)}
+  let used=0,allow=0;const i=widx(v.date);for(let j=0;j<7;j++){const k=addDays(mon,j);if(j===i)allow=Math.max(0,(limit-used)/(7-j));used+=(m[k]||0)}
   let before=0;for(let j=0;j<i;j++)before+=(m[addDays(mon,j)]||0);
   const dayUsed=(m[v.date]||0)+v.g;const weekUsed=used+v.g;const rest=limit-weekUsed;
   const daysLeft=6-i;const next=daysLeft>0?Math.max(0,(limit-before-dayUsed)/daysLeft):0;
@@ -1221,16 +1228,23 @@ function openUrge(id){const u=id?D.weed.urges.find(x=>x.id===id):null;
     +'<label class="l">Cosa hai fatto invece <span class="hint">facoltativo</span><input class="field" name="note" maxlength="200" value="'+esc(u&&u.note)+'" placeholder="Es. una doccia, una passeggiata"></label>'
     +footer(!!u,'urge-del')+'</form>',{urge:id||null});
 }
-function mondayInput(v){return v?mondayOf(v):mondayOf(todayKey())}
-function openPlan(id){const p=id?D.weed.plan.find(x=>x.id===id):null;const cur=mondayOf(todayKey());
+function wkStartInput(v){return v?wkStart(v):wkStart(todayKey())}
+function weekStartField(id){const ws=wsDay();
+  return '<label class="l" style="display:flex;flex-direction:column;gap:6px;font-weight:700">La settimana inizia di<select id="'+id+'" style="max-width:220px">'+DLONG.map((d,i)=>'<option value="'+i+'"'+(i===ws?' selected':'')+'>'+d+'</option>').join('')+'</select><span class="note" style="font-weight:400" data-ws-hint>e finisce di '+DLONG[(ws+6)%7].toLowerCase()+'. Il tetto e le quote si contano su questi 7 giorni.</span></label>'}
+function setWeekStart(v){v=+v;if(!(v>=0&&v<=6)||v===wsDay())return;D.weed.weekStart=v;S.weekMon=wkStart(todayKey());persist();render();
+  document.querySelectorAll('[data-ws-hint]').forEach(el=>{el.textContent='e finisce di '+DLONG[(v+6)%7].toLowerCase()+'. Il tetto e le quote si contano su questi 7 giorni.'});
+  document.querySelectorAll('select[id$="-ws"]').forEach(s=>{s.value=String(v)});
+  toast('Ora la settimana va '+weekRange())}
+function openPlan(id){const p=id?D.weed.plan.find(x=>x.id===id):null;const cur=wkStart(todayKey());
   const last=planSorted().slice(-1)[0];
   openSheet('<h2>'+(p?'Modifica tetto':'Nuovo tetto settimanale')+'</h2><form class="form" id="f-plan">'
     +'<label class="l">Grammi a settimana<input class="field" name="grams" inputmode="decimal" required autofocus value="'+esc(p?fmtGn(p.grams):(last?fmtGn(last.grams):''))+'" placeholder="es. 5" style="max-width:140px"></label>'
-    +'<label class="l">Dalla settimana che contiene il giorno <span class="hint">la settimana va da lunedì a domenica</span><input class="field" type="date" name="week" value="'+esc(p?p.week:(last&&last.week>=cur?addDays(last.week,7):cur))+'"></label>'
+    +weekStartField('plan-ws')
+    +'<label class="l">Dalla settimana che contiene il giorno<input class="field" type="date" name="week" value="'+esc(p?effStart(p.week):(last&&last.eff>=cur?addDays(last.eff,7):cur))+'"></label>'
     +'<p class="note" style="margin:0">Vale da quella settimana in poi, finché non imposti un altro tetto.</p>'
     +footer(!!p,'plan-del')+'</form>',{plan:id||null});
 }
-function openGradual(){const cur=mondayOf(todayKey());const last=planSorted().slice(-1)[0];
+function openGradual(){const cur=wkStart(todayKey());const last=planSorted().slice(-1)[0];
   openSheet('<h2>Piano graduale</h2><p class="muted">Riduci un po\' ogni settimana. Puoi cambiare ogni settimana anche dopo.</p><form class="form" id="f-grad">'
     +'<div class="row2"><label class="l">Si parte da (g/settimana)<input class="field" name="from" inputmode="decimal" value="'+esc(last?fmtGn(last.grams):'5')+'"></label><label class="l">Ogni settimana togli (g)<input class="field" name="step" inputmode="decimal" value="0,5"></label></div>'
     +'<div class="row2"><label class="l">Per quante settimane<input class="field" name="n" inputmode="numeric" value="6"></label><label class="l">Inizio<input class="field" type="date" name="week" value="'+cur+'"></label></div>'
@@ -1238,7 +1252,7 @@ function openGradual(){const cur=mondayOf(todayKey());const last=planSorted().sl
   gradPreview();
 }
 function gradVals(){const f=$('#f-grad');if(!f)return null;const fd=new FormData(f);const from=parseNum(fd.get('from')),step=parseNum(fd.get('step'));const n=Math.max(1,Math.min(52,parseInt(fd.get('n'),10)||0));
-  const mon=mondayInput(String(fd.get('week')||''));if(!isFinite(from)||!isFinite(step)||from<0||step<0)return {err:true};
+  const mon=wkStartInput(String(fd.get('week')||''));if(!isFinite(from)||!isFinite(step)||from<0||step<0)return {err:true};
   return {weeks:Array.from({length:n},(_,i)=>({week:addDays(mon,7*i),grams:r2(Math.max(0,from-step*i))}))}}
 function gradPreview(){const v=gradVals();const p=$('#g-prev');if(!p||!v)return;
   p.innerHTML=v.err?'Controlla i numeri.':v.weeks.map(w=>esc(weekLabel(w.week))+': <b>'+fmtG(w.grams)+'</b>').join('<br>')}
@@ -1348,8 +1362,8 @@ const ACT={
   'plan-edit'(b){openPlan(b.dataset.id)},
   'plan-del'(b){if(!arm(b))return;D.weed.plan=D.weed.plan.filter(p=>p.id!==sheetCtx.plan);persist();closeSheet();render()},
   'plan-grad'(){openGradual()},
-  wprev(){S.weekMon=addDays(S.weekMon>mondayOf(todayKey())?mondayOf(todayKey()):S.weekMon,-7);render()},
-  wnext(){const cur=mondayOf(todayKey());S.weekMon=S.weekMon>=cur?cur:addDays(S.weekMon,7);render()},
+  wprev(){S.weekMon=addDays(S.weekMon>wkStart(todayKey())?wkStart(todayKey()):S.weekMon,-7);render()},
+  wnext(){const cur=wkStart(todayKey());S.weekMon=S.weekMon>=cur?cur:addDays(S.weekMon,7);render()},
   wgo(b){S.weekMon=b.dataset.k;render();window.scrollTo({top:0})},
   /* storico */
   hmode(b){S.hist.mode=b.dataset.v;render()},
@@ -1397,12 +1411,12 @@ document.addEventListener('submit',ev=>{
     const u={id:id||uid(),ts,date:ts.slice(0,10),reasons:fd.getAll('reasons').map(String),note:String(fd.get('note')||'').trim()};
     const i=D.weed.urges.findIndex(x=>x.id===u.id);if(i>=0)D.weed.urges[i]=u;else D.weed.urges.push(u);persist();closeSheet();render();toast(id?'Salvato':'Voglia superata segnata. Ben fatto.');return}
   if(f.id==='f-plan'){const fd=new FormData(f);const g=parseNum(fd.get('grams'));if(!isFinite(g)||g<0||g>500){toast('Scrivi i grammi, per esempio 5.');return}
-    const week=mondayInput(String(fd.get('week')||''));const id=sheetCtx.plan;
-    D.weed.plan=D.weed.plan.filter(p=>p.id===id||p.week!==week);
+    const week=wkStartInput(String(fd.get('week')||''));const id=sheetCtx.plan;
+    D.weed.plan=D.weed.plan.filter(p=>p.id===id||effStart(String(p.week))!==week);
     const p={id:id||uid(),week,grams:r2(g)};const i=D.weed.plan.findIndex(x=>x.id===p.id);if(i>=0)D.weed.plan[i]=p;else D.weed.plan.push(p);
-    persist();closeSheet();S.weekMon=mondayOf(todayKey());render();toast('Tetto salvato');return}
+    persist();closeSheet();S.weekMon=wkStart(todayKey());render();toast('Tetto salvato');return}
   if(f.id==='f-grad'){const v=gradVals();if(!v||v.err){toast('Controlla i numeri.');return}
-    const ws=new Set(v.weeks.map(w=>w.week));D.weed.plan=D.weed.plan.filter(p=>!ws.has(p.week)).concat(v.weeks.map(w=>({id:uid(),...w})));
+    const ws=new Set(v.weeks.map(w=>w.week));D.weed.plan=D.weed.plan.filter(p=>!ws.has(effStart(String(p.week)))).concat(v.weeks.map(w=>({id:uid(),...w})));
     persist();closeSheet();render();toast('Piano di '+v.weeks.length+' settimane salvato');return}
   if(f.id==='todo-form'){const i=f.querySelector('input');const v=i.value.trim();if(!v)return;S.day.todos.push({id:uid(),text:v,done:false});i.value='';touchDay();setTimeout(()=>{const n=$('#todo-in');if(n)n.focus()},0);return}
   if(f.classList.contains('step-form')){const i=f.querySelector('input');const v=i.value.trim();if(!v)return;const gid=f.dataset.goal;i.value='';
@@ -1423,6 +1437,7 @@ document.addEventListener('change',ev=>{
   else if(t.id==='tm-course')S.tmCourse=t.value;
   else if(t.id==='weed-def'){const g=parseNum(t.value);if(isFinite(g)&&g>0&&g<10){D.weed.defaultGrams=r2(g);persist();toast('Salvato')}else{t.value=fmtGn(D.weed.defaultGrams);toast('Scrivi un numero, per esempio 0,3.')}}
   else if(t.id==='weed-today'){D.weed.showOnToday=t.checked;persist()}
+  else if(t.id==='weed-ws'||t.id==='plan-ws')setWeekStart(t.value);
 });
 document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'&&!$('#backdrop').hidden)closeSheet();

@@ -1,6 +1,6 @@
 // Fa funzionare la scheda anche senza connessione: tiene una copia dei file
 // e la aggiorna in background quando c'è rete. I tuoi dati non passano da qui.
-const CACHE = 'giornata-v2';
+const CACHE = 'giornata-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
