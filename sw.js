@@ -1,6 +1,6 @@
 // Fa funzionare la scheda anche senza connessione: tiene una copia dei file
 // e la aggiorna in background quando c'è rete. I tuoi dati non passano da qui.
-const CACHE = 'giornata-v3';
+const CACHE = 'giornata-v4';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -11,7 +11,8 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      // cancella solo le copie vecchie di questa scheda: altre app sullo stesso sito hanno le loro
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('giornata-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
