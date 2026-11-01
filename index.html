@@ -374,10 +374,10 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 .form label.l,.form .l{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px}
 .form .hint{font-weight:400;font-size:13px;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.days{display:flex;gap:6px;flex-wrap:wrap}
-.days label{position:relative}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,46px));gap:6px}
+.days label{position:relative;min-width:0}
 .days input{position:absolute;opacity:0;inset:0;margin:0}
-.days span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--surface-2);font-weight:700;color:var(--muted)}
+.days span{display:grid;place-items:center;width:100%;height:42px;border-radius:12px;background:var(--surface-2);font-weight:700;color:var(--muted)}
 .days input:checked+span{background:var(--accent);color:var(--accent-ink)}
 .days input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
 .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -399,6 +399,33 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 .menu .btn{justify-content:flex-start}
 
 .toast{position:fixed;left:50%;bottom:calc(160px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+/* sto male, medicine, più canne */
+.toast{display:flex;align-items:center;gap:12px}
+.toast-act{color:var(--bg);text-decoration:underline;font-weight:800;padding:4px 2px;flex:none}
+.sick-card{border-left:6px solid var(--warn)}
+.sick-card.lv-alto{border-left-color:var(--urgent)}
+.sick-chip{background:var(--warn-soft);color:var(--warn)}
+.susp{margin-top:12px;border-top:1px dashed var(--line);padding-top:6px}
+.susp summary{cursor:pointer;font-weight:700;color:var(--muted);min-height:40px;display:flex;align-items:center}
+.susp .item{opacity:.7}
+.tag.med{background:var(--evening-soft);color:var(--evening)}
+.is-med .check{border-radius:50%}
+.slot{display:grid;grid-template-columns:minmax(0,7.5em) minmax(0,1fr) 40px;gap:8px;align-items:center}
+.slot .x,.wmrow .x{width:40px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:10px}
+.slot .x svg,.wmrow .x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.wmrow{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border-radius:12px;padding:8px}
+.wm-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,5.5em) auto 40px;gap:8px;align-items:center}
+.wm-u{font-weight:700;color:var(--muted)}
+.checkline.ess{padding:4px 0}
+.cal .c{position:relative}
+.cal .c.sick::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 1.5px var(--surface)}
+.legend i.sick-dot{border-radius:50%;width:10px;height:10px;background:var(--warn)}
+/* iOS: i campi data e ora hanno una larghezza minima propria che fa sbordare le colonne */
+.row2>*{min-width:0}
+input[type=date],input[type=time],input[type=datetime-local]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;display:block}
+input::-webkit-date-and-time-value{text-align:left}
+select{min-width:0;max-width:100%}
+@media (max-width:359px){.row2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -502,13 +529,13 @@ const fmtGn=g=>r2(+g||0).toLocaleString('it-IT',{maximumFractionDigits:2});
 
 /* ---------- dati (salvati nel browser di questo dispositivo) ---------- */
 function normWeed(w){w=obj(w);return {weekStart:+w.weekStart>=0&&+w.weekStart<=6?+w.weekStart:0,plan:arr(w.plan),log:arr(w.log),urges:arr(w.urges),defaultGrams:isFinite(+w.defaultGrams)&&+w.defaultGrams>0?+w.defaultGrams:0.3,showOnToday:w.showOnToday!==false}}
-function normData(d){d=obj(d);return {v:2,routine:arr(d.routine),reqs:arr(d.reqs),events:arr(d.events),goals:arr(d.goals),courses:arr(d.courses),weed:normWeed(d.weed),days:obj(d.days),meta:obj(d.meta)}}
+function normData(d){d=obj(d);return {v:3,routine:arr(d.routine),reqs:arr(d.reqs),events:arr(d.events),goals:arr(d.goals),meds:arr(d.meds),courses:arr(d.courses),weed:normWeed(d.weed),days:obj(d.days),meta:obj(d.meta)}}
 function loadData(){try{const r=localStorage.getItem(LS_KEY);if(r)return normData(JSON.parse(r))}catch(e){}return null}
 function seedData(){
   const t=todayKey();const sat=addDays(t,(5-wd(t)+7)%7);const all=ALLDAYS.slice();
   const r=(id,title,time,part,days,order)=>({id,title,time,part,days,order,example:true});
   return normData({
-    routine:[r('ex-r1',"Sveglia e un bicchiere d'acqua",'07:30','mattina',all,0),r('ex-r2','Colazione','07:45','mattina',all,1),r('ex-r3','Doccia e vestirsi','08:00','mattina',[0,1,2,3,4],2),
+    routine:[r('ex-r1',"Sveglia e un bicchiere d'acqua",'07:30','mattina',all,0),Object.assign(r('ex-r2','Colazione','07:45','mattina',all,1),{essential:true}),r('ex-r3','Doccia e vestirsi','08:00','mattina',[0,1,2,3,4],2),
       r('ex-r4','2 minuti su questa scheda: scegli la cosa più importante','08:30','mattina',all,3),r('ex-r5','Pausa pranzo lontano dallo schermo','13:00','pomeriggio',[0,1,2,3,4],4),
       r('ex-r6','10 minuti a piedi','16:30','pomeriggio',all,5),r('ex-r7','Prepara le cose per domani','21:30','sera',[0,1,2,3,6],6),r('ex-r8','Schermi spenti, a letto','23:15','sera',all,7)],
     reqs:[{id:'ex-q1',title:'Bere acqua',target:8,unit:'bicchieri',days:all,describe:false,example:true},
@@ -522,16 +549,25 @@ function seedData(){
 }
 let D=loadData();if(!D)D=seedData();
 
-function emptyDay(){return {done:{},req:{},notes:{},todos:[],focus:'',study:{}}}
-function normDay(b){b=b?clone(b):{};return {done:obj(b.done),req:obj(b.req),notes:obj(b.notes),todos:arr(b.todos),focus:typeof b.focus==='string'?b.focus:'',study:obj(b.study),snap:b.snap}}
+function emptyDay(){return {done:{},req:{},notes:{},todos:[],focus:'',study:{},sick:null}}
+function normDay(b){b=b?clone(b):{};return {done:obj(b.done),req:obj(b.req),notes:obj(b.notes),todos:arr(b.todos),focus:typeof b.focus==='string'?b.focus:'',study:obj(b.study),
+  sick:b.sick&&['lieve','medio','alto'].includes(b.sick.level)?b.sick:null,sickCheck:b.sickCheck||null,snap:b.snap}}
+/* malattia: con livello medio o alto restano solo le cose fondamentali (e le medicine) */
+const sickLv=day=>day&&day.sick?day.sick.level:null;
+const restricted=day=>{const l=sickLv(day);return l==='medio'||l==='alto'};
+const SICK_TXT={lieve:'La giornata resta com\'è: vai con calma.',medio:'Restano solo le cose fondamentali e le medicine.',alto:'Solo le cose fondamentali e le medicine. Il resto della pagina si nasconde: oggi riposa.'};
+const sickWhat=s=>[...arr(s&&s.sym),s&&s.what].filter(Boolean).join(', ')||'non sto bene';
 
-function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>{t.hidden=true},2800)}
+/* toast con un pulsante facoltativo (es. "Annulla") */
+function toast(msg,actLabel,actFn){const t=$('#toast');t.textContent=msg;
+  if(actLabel){const b=document.createElement('button');b.textContent=actLabel;b.className='toast-act';b.onclick=()=>{t.hidden=true;actFn()};t.appendChild(b)}
+  t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>{t.hidden=true},actLabel?6000:2800)}
 let saveWarned=false;
 function persist(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(D));saveWarned=false}
   catch(e){if(!saveWarned){saveWarned=true;toast('Non riesco a salvare: la memoria del browser è piena o bloccata.')}}
 }
-function snapshot(key){const day=D.days[key];if(!day)return;const st=stats(key,day);day.snap={pct:Math.round(st.pct*1000)/1000,done:st.done,total:st.total}}
+function snapshot(key){const day=D.days[key];if(!day)return;const st=stats(key,day);day.snap={pct:Math.round(st.pct*1000)/1000,done:st.done,total:st.total,sick:sickLv(day)||undefined}}
 function commit(){if(D.days[S.date])snapshot(S.date);persist()}
 
 /* ---------- stato ---------- */
@@ -559,20 +595,34 @@ function goDate(k){S.date=k;loadDay();render();window.scrollTo({top:0})}
 /* ---------- calcoli: giornata ---------- */
 const forDay=(list,k)=>{const w=wd(k);return list.filter(r=>!Array.isArray(r.days)||r.days.length===0||r.days.includes(w))};
 function eventsFor(k){const w=wd(k);return D.events.filter(e=>e.date===k||(e.weekly&&e.date&&e.date<=k&&wd(e.date)===w))}
+function medsFor(k){const w=wd(k);return D.meds.filter(m=>(!m.start||m.start<=k)&&(!m.end||m.end>=k)&&(!Array.isArray(m.days)||!m.days.length||m.days.includes(w)))}
 function timeline(k){
   const items=[
-    ...forDay(D.routine,k).map(r=>({kind:'routine',id:r.id,title:r.title,time:r.time||'',part:partOfTime(r.time)||r.part||'mattina',order:r.order||0,example:r.example,note:''})),
-    ...eventsFor(k).map(e=>({kind:'events',id:e.id,title:e.title,time:e.time||'',part:partOfTime(e.time)||'giornata',order:0,example:e.example,note:e.note||'',weekly:e.weekly}))
+    ...forDay(D.routine,k).map(r=>({kind:'routine',id:r.id,title:r.title,time:r.time||'',part:partOfTime(r.time)||r.part||'mattina',order:r.order||0,example:r.example,note:'',essential:!!r.essential})),
+    ...eventsFor(k).map(e=>({kind:'events',id:e.id,title:e.title,time:e.time||'',part:partOfTime(e.time)||'giornata',order:0,example:e.example,note:e.note||'',weekly:e.weekly,essential:!!e.essential}))
   ];
+  /* medicine: a orario fisso entrano nel filo per orario; "dopo un evento" si mettono subito dopo quell'evento */
+  const after=[];
+  medsFor(k).forEach(m=>arr(m.slots).forEach(s=>{
+    const it={kind:'meds',id:m.id+'_'+s.id,medId:m.id,title:m.name,dose:m.dose||'',time:'',part:'giornata',order:0,note:m.note||'',essential:true};
+    if(s.type==='after'&&s.ref){it.after=s.ref;after.push(it)}
+    else{it.time=s.time||'';it.part=partOfTime(s.time)||'giornata';items.push(it)}}));
   items.sort((a,b)=>PORDER[a.part]-PORDER[b.part]||(a.time?0:1)-(b.time?0:1)||(a.time||'').localeCompare(b.time||'')||a.order-b.order||String(a.title).localeCompare(String(b.title)));
+  after.forEach(it=>{const idx=items.findIndex(i=>i.id===it.after);
+    if(idx<0){it.afterTitle=null;items.unshift(it);return}
+    const ref=items[idx];it.part=ref.part;it.afterTitle=ref.title;it.afterTime=ref.time;
+    let j=idx+1;while(j<items.length&&items[j].after===it.after)j++;items.splice(j,0,it)});
   return items;
 }
 function stats(k,day){
-  day=day||S.day;const tl=timeline(k);const reqs=forDay(D.reqs,k);const d=obj(day.done);const rq=obj(day.req);
+  day=day||S.day;const all=timeline(k);const r=restricted(day);
+  const tl=r?all.filter(i=>i.essential):all;const susp=r?all.filter(i=>!i.essential):[];
+  const reqsAll=forDay(D.reqs,k);const reqs=r?reqsAll.filter(x=>x.essential):reqsAll;const reqsSusp=r?reqsAll.filter(x=>!x.essential):[];
+  const d=obj(day.done);const rq=obj(day.req);
   let total=0,done=0,units=0,unitsDone=0;
   tl.forEach(i=>{if(d[i.id]==='s')return;total++;units++;if(d[i.id]){done++;unitsDone++}});
   reqs.forEach(r=>{const t=Math.max(1,+r.target||1);const c=Math.min(t,+rq[r.id]||0);total++;units++;unitsDone+=c/t;if(c>=t)done++});
-  return {tl,reqs,total,done,pct:units?unitsDone/units:0};
+  return {tl,susp,reqs,reqsSusp,total,done,pct:units?unitsDone/units:0};
 }
 function countdown(dl,exam){
   if(!dl)return {txt:exam?'nessuna data d\'esame':'senza scadenza',lv:'none',n:null};
@@ -596,7 +646,7 @@ function studyMin(k){const d=D.days[k];if(!d||!d.study)return 0;return Object.va
 function studyStart(){if(C.sst!==undefined)return C.sst;let s=null;D.courses.forEach(c=>{if(c.createdAt&&(!s||c.createdAt<s))s=c.createdAt});return C.sst=s}
 function studyVal(k){const g=studyGoal();return g.type==='min'?studyMin(k):(checksByDay()[k]||0)}
 function studyPct(k){const st=studyStart();if(!st||k<st||k>todayKey())return null;const g=studyGoal();const v=studyVal(k);
-  if(!g.days.includes(wd(k)))return v>0?Math.min(1,v/g.value):null;return Math.min(1,v/g.value)}
+  if(!g.days.includes(wd(k))||restricted(D.days[k]))return v>0?Math.min(1,v/g.value):null;return Math.min(1,v/g.value)}
 const courseName=id=>{if(id==='gen')return 'Studio generale';const c=D.courses.find(x=>x.id===id);return c?c.name:'Corso eliminato'};
 function activeCourses(){return D.courses.filter(c=>!c.done).sort((a,b)=>(a.exam?0:1)-(b.exam?0:1)||String(a.exam||'').localeCompare(String(b.exam||''))||String(a.name).localeCompare(String(b.name)))}
 function toReview(){const tk=todayKey();const out=[];
@@ -647,11 +697,13 @@ function itemRow(i,nowId){
   const v=S.day.done[i.id];const cls=['item','p-'+i.part,v===true?'is-done':'',v==='s'?'is-skip':'',i.id===nowId?'is-now':''].join(' ');
   const meta=[];
   if(i.kind==='events')meta.push('<span class="tag">impegno'+(i.weekly?' · ogni sett.':'')+'</span>');
+  if(i.kind==='meds')meta.push('<span class="tag med">medicina</span>'+(i.dose?'<span>'+esc(i.dose)+'</span>':'')+(i.after?'<span>'+(i.afterTitle?'dopo '+esc(i.afterTitle):'oggi senza evento di riferimento')+'</span>':''));
   if(v==='s')meta.push('<span>saltato oggi</span>');
   if(i.example)meta.push('<span class="tag ex">esempio</span>');
   if(i.note)meta.push('<span>'+esc(i.note)+'</span>');
-  const tc=i.time?'<span class="tcol">'+esc(i.time)+'</span>':'<span class="tcol none">'+(i.part==='giornata'?'oggi':'—')+'</span>';
-  return '<li class="'+cls+'"><button class="main" data-act="toggle" data-id="'+esc(i.id)+'" aria-pressed="'+(v===true)+'">'+tc+'<span class="check">'+IC.check+'</span><span class="txt"><span class="t">'+esc(i.title)+'</span>'+(meta.length?'<span class="m">'+meta.join('')+'</span>':'')+'</span></button><button class="more" data-act="itemmenu" data-kind="'+i.kind+'" data-id="'+esc(i.id)+'" aria-label="Opzioni per '+esc(i.title)+'">'+IC.more+'</button></li>';
+  const tc=i.time?'<span class="tcol">'+esc(i.time)+'</span>':i.after?'<span class="tcol none">dopo</span>':'<span class="tcol none">'+(i.part==='giornata'?'oggi':'—')+'</span>';
+  const kid=i.kind==='meds'?i.medId:i.id;
+  return '<li class="'+cls+(i.kind==='meds'?' is-med':'')+'"><button class="main" data-act="toggle" data-id="'+esc(i.id)+'" aria-pressed="'+(v===true)+'">'+tc+'<span class="check">'+IC.check+'</span><span class="txt"><span class="t">'+esc(i.title)+'</span>'+(meta.length?'<span class="m">'+meta.join('')+'</span>':'')+'</span></button><button class="more" data-act="itemmenu" data-kind="'+i.kind+'" data-id="'+esc(kid)+'" data-item="'+esc(i.id)+'" aria-label="Opzioni per '+esc(i.title)+'">'+IC.more+'</button></li>';
 }
 
 function nowPick(tl){
@@ -716,8 +768,11 @@ function weedSummary(k,compact,weekOnly){
 function weedMini(){
   if(!planSorted().length||D.weed.showOnToday===false||S.date!==todayKey())return '';
   return '<section class="card stack-s"><div class="sec-head" style="margin:0"><h2>Cannabis</h2><button class="btn small" data-act="tab" data-tab="cannabis">Apri</button></div>'+weedSummary(S.date,true)
-    +'<div class="btnrow"><button class="btn primary small" data-act="weed-new">Segna una canna</button><button class="btn small" data-act="urge-new">Ho resistito a una voglia</button></div></section>';
+    +'<div class="btnrow"><button class="btn primary small" data-act="weed-new">Segna una canna</button>'+repeatBtn()+'<button class="btn small" data-act="weed-multi">Più canne</button><button class="btn small" data-act="urge-new">Ho resistito</button></div></section>';
 }
+function lastWeed(){return D.weed.log.slice().sort((a,b)=>String(b.ts).localeCompare(String(a.ts)))[0]||null}
+function repeatBtn(){const l=lastWeed();if(!l)return '';
+  return '<button class="btn small" data-act="weed-repeat" title="Segna adesso una canna uguale all\'ultima">+1 come l\'ultima · '+fmtG(l.grams)+(arr(l.reasons)[0]?' · '+esc(l.reasons[0]):'')+'</button>'}
 
 function renderOggi(){
   const k=S.date;const isToday=k===todayKey();const st=stats(k);
@@ -728,9 +783,16 @@ function renderOggi(){
   h+='<section class="hero'+(celebrate?' celebrate':'')+'"><button class="iconbtn" data-act="prev" aria-label="Giorno precedente">'+IC.left+'</button>'
     +'<div class="dn"><h1>'+esc(longDate(k))+'</h1><div class="sub"><span>'+esc(relDay(k))+'</span>'
     +(isToday?'':'<button class="pill link" data-act="today">Torna a oggi</button>')
-    +'<span class="num">'+st.done+' di '+st.total+' fatti</span></div></div>'
+    +'<span class="num">'+st.done+' di '+st.total+' fatti</span>'+(S.day.sick?'':'<button class="pill" data-act="sick">Sto male</button>')+'</div></div>'
     +'<div class="ring" role="img" aria-label="'+Math.round(st.pct*100)+'% della giornata completato"><svg viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="26"/><circle class="pr" cx="32" cy="32" r="26" stroke-dasharray="'+CC.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg><span class="num">'+Math.round(st.pct*100)+'%</span></div>'
     +'<button class="iconbtn" data-act="next" aria-label="Giorno successivo">'+IC.right+'</button></section>';
+
+  const sk=S.day.sick;const alto=sickLv(S.day)==='alto';
+  if(sk){h+='<section class="card sick-card lv-'+sk.level+'"><div class="sec-head" style="margin:0 0 4px"><h2>'+(isToday?'Oggi stai male':'Stavi male')+'</h2><span class="chip sick-chip">livello '+esc(sk.level)+'</span></div>'
+      +'<p style="margin:0"><b>'+esc(sickWhat(sk))+'</b>'+(sk.temp?' · <span class="num">'+esc(sk.temp)+' °C</span>':'')+'</p><p class="note" style="margin:4px 0 0">'+SICK_TXT[sk.level]+(restricted(S.day)&&(st.susp.length+st.reqsSusp.length)?' '+(st.susp.length+st.reqsSusp.length)+' cose sospese, non contano nella percentuale.':'')+'</p>'
+      +'<div class="btnrow" style="margin-top:10px"><button class="btn small" data-act="sick">Modifica</button><button class="btn small primary" data-act="sick-off">Sto meglio</button></div></section>'}
+  else if(isToday&&!S.day.sickCheck){const y=D.days[addDays(k,-1)];if(y&&y.sick){
+    h+='<section class="card sick-card"><p style="margin:0">Ieri stavi male (<b>'+esc(sickWhat(y.sick))+'</b>, livello '+esc(y.sick.level)+'). Come va oggi?</p><div class="btnrow" style="margin-top:10px"><button class="btn small" data-act="sick-again">Sto ancora male</button><button class="btn small primary" data-act="sick-ok">Sto meglio</button></div></section>'}}
 
   h+='<section class="card focus"><label for="focus-in"><span class="eyebrow">La cosa più importante '+(isToday?'oggi':'di questo giorno')+'</span><input id="focus-in" maxlength="140" placeholder="Scrivi una sola cosa…" value="'+esc(S.day.focus)+'" enterkeyhint="done" autocomplete="off"></label></section>';
 
@@ -755,6 +817,7 @@ function renderOggi(){
       L+='<div class="part p-'+p+'"><div class="part-h"><span class="dot"></span>'+lab+'<span class="cnt num">'+dn+'/'+its.length+'</span></div><ul class="list">'+its.map(i=>itemRow(i,nowId)).join('')+'</ul></div>';
     });
   }
+  if(st.susp.length)L+='<details class="susp"><summary>Sospese perché stai male ('+st.susp.length+')</summary><p class="note" style="margin:6px 0">Puoi spuntarle se le fai, ma oggi non contano.</p><ul class="list">'+st.susp.map(i=>itemRow(i,null)).join('')+'</ul></details>';
   L+='</section>';
 
   let R='';
@@ -762,7 +825,13 @@ function renderOggi(){
   R+='<section class="card"><div class="sec-head"><h2>Requisiti del giorno</h2><button class="btn small" data-act="new" data-kind="reqs">+ Requisito</button></div>';
   if(!st.reqs.length)R+='<div class="empty">Cose da raggiungere ogni giorno, come bere 8 bicchieri d\'acqua o fare un allenamento.</div>';
   else R+='<div class="reqs">'+st.reqs.map(reqTile).join('')+'</div>';
+  if(st.reqsSusp.length)R+='<p class="note" style="margin:10px 0 0">Sospesi oggi: '+st.reqsSusp.map(r=>esc(r.title)).join(', ')+'.</p>';
   R+='</section>';
+  if(alto){
+    R+='<section class="card"><h2 style="font-size:18px">Oggi riposa</h2><p class="note" style="margin:6px 0 0">Studio, cose da fare e obiettivi sono nascosti finché stai male. Ritornano appena tocchi "Sto meglio".</p></section>';
+    h+='<div class="grid"><div class="stack">'+L+'</div><div class="stack">'+R+'</div></div>';
+    $('#v-oggi').innerHTML=h;return;
+  }
   R+=studyMini();
 
   R+='<section class="card"><div class="sec-head"><h2>Da fare '+(isToday?'oggi':'in questo giorno')+'</h2><span class="muted num">'+S.day.todos.filter(t=>t.done).length+'/'+S.day.todos.length+'</span></div>';
@@ -854,7 +923,8 @@ function courseCard(c){
 /* ---------- cannabis ---------- */
 function renderWeed(){
   const tk=todayKey();const plan=planSorted();const curMon=wkStart(tk);const mon=S.weekMon>curMon?curMon:S.weekMon;
-  let h='<div class="sec-head" style="flex-wrap:wrap"><h1 class="page-h">Cannabis</h1><div class="btnrow"><button class="btn primary" data-act="weed-new">+ Segna una canna</button><button class="btn" data-act="urge-new">Ho resistito</button></div></div>';
+  let h='<div class="sec-head" style="flex-wrap:wrap"><h1 class="page-h">Cannabis</h1><div class="btnrow"><button class="btn primary" data-act="weed-new">+ Segna una canna</button><button class="btn" data-act="weed-multi">Più canne insieme</button><button class="btn" data-act="urge-new">Ho resistito</button></div></div>';
+  const rb=repeatBtn();if(rb)h+='<div class="btnrow" style="margin-top:-6px">'+rb+'</div>';
   if(!plan.length){
     h+='<section class="card stack-s"><h2>Imposta il tuo percorso</h2><p class="note" style="margin:0">Scegli il massimo di grammi per settimana ('+weekRange()+', puoi cambiare il giorno d\'inizio). Ogni giorno la scheda ti dice quanto puoi usare: se un giorno usi di più, la differenza viene tolta dai giorni che restano. Puoi cambiare la quantità da una settimana all\'altra.</p>'
       +'<div class="btnrow"><button class="btn primary" data-act="plan-new">Imposta il tetto settimanale</button><button class="btn" data-act="plan-grad">Piano graduale</button></div></section>';
@@ -926,7 +996,7 @@ function renderHist(){
   h+='<p class="note" style="margin:0">'+notes[cat]+' Tocca un giorno per vedere tutte e tre le categorie.</p>';
   const legendPct='<div class="legend"><span><i class="b0"></i>0–24%</span><span><i class="b1"></i>25–49%</span><span><i class="b2"></i>50–74%</span><span><i class="b3"></i>75–99%</span><span><i class="b4"></i>100%</span></div>';
   const legendWeed='<div class="legend"><span><i class="w-zero"></i>0 g</span><span><i class="w-ok"></i>entro la quota</span><span><i class="w-orange"></i>sopra la quota del giorno</span><span><i class="w-red"></i>sopra il tetto settimanale</span></div>';
-  const legend=cat==='cannabis'?legendWeed:legendPct;
+  const legend=(cat==='cannabis'?legendWeed:legendPct).replace(/<\/div>$/,'<span><i class="sick-dot"></i>stavi male</span></div>');
   const pctFn=cat==='studio'?studyPct:dayPct;
 
   if(mode==='giorni'){
@@ -940,7 +1010,8 @@ function renderHist(){
       if(!fut){if(cat==='cannabis'){if(ws&&k>=ws){const wd_=weedDay(k);cls=weedCellCls(wd_);txt=fmtGn(wd_.u)}}
         else{const p=pctFn(k);cls=bucket(p);txt=p==null?'·':String(Math.round(p*100))}}
       else txt='';
-      cal+='<button class="c '+cls+(fut?' fut':'')+(k===t?' today':'')+'" data-act="dayinfo" data-k="'+k+'" aria-label="'+esc(longDate(k))+'"><span class="dd num">'+d+'</span><span class="pp">'+txt+'</span></button>'}
+      const sickD=!fut&&D.days[k]&&D.days[k].sick;
+      cal+='<button class="c '+cls+(fut?' fut':'')+(sickD?' sick':'')+(k===t?' today':'')+'" data-act="dayinfo" data-k="'+k+'" aria-label="'+esc(longDate(k))+'"><span class="dd num">'+d+'</span><span class="pp">'+txt+'</span></button>'}
     cal+='</div>';
     let kp='';
     if(cat==='cannabis'){const a=weedAgg(keys);
@@ -990,14 +1061,15 @@ function openDayInfo(k){
   if(ws&&k>=ws&&k<=t){const d=weedDay(k);if(d.status!=='none'){const lab={zero:'0 g, ottimo',ok:'entro la quota',orange:'sopra la quota del giorno',red:'sopra il tetto della settimana'}[d.status];
     wk='<div class="kpi '+weedCellCls(d)+'"><b class="num">'+fmtG(d.u)+'</b><span>Cannabis · quota '+fmtG(d.allow)+(d.allow>0?' · '+Math.round(d.u/d.allow*100)+'% della quota':'')+' · '+lab+'</span></div>'}}
   const studies=D.days[k]&&D.days[k].study?Object.entries(D.days[k].study).filter(([,v])=>+v>0).map(([c,v])=>esc(courseName(c))+' '+v+' min').join(', '):'';
-  openSheet('<h2>'+esc(longDate(k))+'</h2><p class="muted">'+esc(relDay(k))+'</p><div class="kpis" style="grid-template-columns:1fr">'
+  const sk=D.days[k]&&D.days[k].sick;
+  openSheet('<h2>'+esc(longDate(k))+'</h2><p class="muted">'+esc(relDay(k))+(sk?' · stavi male: '+esc(sickWhat(sk))+', livello '+esc(sk.level):'')+'</p><div class="kpis" style="grid-template-columns:1fr">'
     +'<div class="kpi '+bucket(p)+'"><b>'+pctTxt(p)+'</b><span>Giornata · routine, impegni e requisiti'+(D.days[k]&&D.days[k].snap?' · '+D.days[k].snap.done+' di '+D.days[k].snap.total+' fatti':'')+'</span></div>'
     +'<div class="kpi '+bucket(sp)+'"><b>'+pctTxt(sp)+'</b><span>Studio · '+fmtMin(mins)+' · '+ch+' spunte · obiettivo '+g.value+' '+goalUnit(g)+(studies?' · '+studies:'')+'</span></div>'
     +wk+'</div><div class="foot"><div class="r"><button class="btn ghost" data-act="close">Chiudi</button><button class="btn primary" data-act="openday" data-k="'+k+'">Apri questo giorno</button></div></div>');
 }
 
 function setRow(kind,x,meta,part){
-  return '<button class="setrow'+(part?' p-'+part:'')+'" data-act="edit" data-kind="'+kind+'" data-id="'+esc(x.id)+'"><span class="bullet"></span><span class="txt"><span class="t">'+esc(x.title)+(x.example?' <span class="tag ex">esempio</span>':'')+'</span><span class="m">'+esc(meta)+'</span></span>'+IC.edit.replace('<svg','<svg aria-hidden="true"')+'</button>';
+  return '<button class="setrow'+(part?' p-'+part:'')+'" data-act="edit" data-kind="'+kind+'" data-id="'+esc(x.id)+'"><span class="bullet"></span><span class="txt"><span class="t">'+esc(x.title)+(x.essential?' <span class="tag">fondamentale</span>':'')+(x.example?' <span class="tag ex">esempio</span>':'')+'</span><span class="m">'+esc(meta)+'</span></span>'+IC.edit.replace('<svg','<svg aria-hidden="true"')+'</button>';
 }
 function renderSetup(){
   let h='<h1 class="page-h">Routine e impegni</h1>';
@@ -1017,6 +1089,11 @@ function renderSetup(){
   h+=ev.length?'<div class="list">'+ev.map(x=>setRow('events',x,(x.weekly?'ogni '+DLONG[wd(x.date)].toLowerCase():relDay(x.date)+' · '+shortDate(x.date))+(x.time?' · '+x.time:''),partOfTime(x.time)||'giornata')).join('')+'</div>':'<div class="empty">Nessun impegno in arrivo.</div>';
   if(past.length)h+='<div style="margin-top:10px"><button class="btn small ghost" data-act="clear-past">Elimina '+past.length+(past.length===1?' impegno passato':' impegni passati')+'</button></div>';
   h+='</section>';
+  h+='<section class="card"><div class="sec-head"><h2>Medicine</h2><button class="btn small primary" data-act="med-new">+ Aggiungi</button></div>';
+  h+=D.meds.length?'<div class="list">'+D.meds.map(m=>'<button class="setrow" data-act="med-edit" data-id="'+esc(m.id)+'"><span class="bullet" style="background:var(--evening)"></span><span class="txt"><span class="t">'+esc(m.name)+(m.dose?' · '+esc(m.dose):'')+'</span><span class="m">'+esc(medSlotsText(m))+' · '+daysText(m.days)+(m.end?(m.end<tk?' · finita il ':' · fino al ')+esc(shortDate(m.end)):'')+'</span></span>'+IC.edit.replace('<svg','<svg aria-hidden="true"')+'</button>').join('')+'</div>'
+    :'<div class="empty">Nessuna medicina. Puoi metterle a un orario preciso o subito dopo un evento della routine, come la colazione. Compaiono nel filo della giornata, da spuntare.</div>';
+  h+='</section>';
+  h+='<section class="card"><h2 style="font-size:18px;margin-bottom:6px">Quando stai male</h2><p class="note" style="margin:0">Con "Sto male" di livello medio o alto restano solo le cose fondamentali e le medicine. Ora le cose fondamentali sono '+essentialCount()+'.</p><div class="btnrow" style="margin-top:12px"><button class="btn small primary" data-act="ess-open">Scegli le cose fondamentali</button></div></section>';
   const exN=KINDS.reduce((n,k)=>n+D[k].filter(x=>x.example).length,0);
   const lb=D.meta.lastBackup;const nDays=Object.keys(D.days).length;
   const old=!lb||diffDays(lb,tk)>14;
@@ -1045,7 +1122,7 @@ function openForm(kind,id){
      +'<label class="l">Cosa fare<input class="field" name="title" required maxlength="120" autofocus value="'+esc(x&&x.title)+'" placeholder="Es. Prendere le medicine"></label>'
      +'<div class="row2"><label class="l">Orario <span class="hint">facoltativo</span><input class="field" type="time" name="time" value="'+esc(x&&x.time)+'"></label>'
      +'<label class="l">Momento <span class="hint">se senza orario</span><select name="part">'+PARTS.slice(1).map(([p,l])=>'<option value="'+p+'"'+((x&&x.part||'mattina')===p?' selected':'')+'>'+l+'</option>').join('')+'</select></label></div>'
-     +daysField(x&&x.days)+footer(e)+'</form>';
+     +essField(x)+daysField(x&&x.days)+footer(e)+'</form>';
   }else if(kind==='reqs'){
     h='<h2>'+(e?'Modifica requisito':'Nuovo requisito')+'</h2><form class="form" id="f-item">'
      +'<label class="l">Cosa raggiungere<input class="field" name="title" required maxlength="120" autofocus value="'+esc(x&&x.title)+'" placeholder="Es. Pasti, Allenamento, Bere acqua"></label>'
@@ -1053,13 +1130,13 @@ function openForm(kind,id){
      +'<label class="l">Unità <span class="hint">facoltativa</span><input class="field" name="unit" maxlength="30" value="'+esc(x&&x.unit)+'" placeholder="pasti, bicchieri…"></label></div>'
      +'<label class="checkline"><input type="checkbox" name="describe" id="f-describe"'+(x&&x.describe?' checked':'')+'><span>Chiedi una descrizione ogni volta<span class="hint">Es. cosa hai mangiato o che allenamento hai fatto. Lasciala spenta per le cose già chiare, come bere acqua.</span></span></label>'
      +'<label class="l" id="f-prompt-wrap"'+(x&&x.describe?'':' hidden')+'>Domanda da farti <span class="hint">facoltativa</span><input class="field" name="prompt" maxlength="80" value="'+esc(x&&x.prompt)+'" placeholder="Es. Cosa hai mangiato?"></label>'
-     +daysField(x&&x.days)+footer(e)+'</form>';
+     +essField(x)+daysField(x&&x.days)+footer(e)+'</form>';
   }else if(kind==='events'){
     h='<h2>'+(e?'Modifica impegno':'Nuovo impegno')+'</h2><form class="form" id="f-item">'
      +'<label class="l">Impegno<input class="field" name="title" required maxlength="120" autofocus value="'+esc(x&&x.title)+'" placeholder="Es. Dentista"></label>'
      +'<div class="row2"><label class="l">Giorno<input class="field" type="date" name="date" required value="'+esc(x?x.date:S.date)+'"></label>'
      +'<label class="l">Orario <span class="hint">facoltativo</span><input class="field" type="time" name="time" value="'+esc(x&&x.time)+'"></label></div>'
-     +'<label class="checkline"><input type="checkbox" name="weekly"'+(x&&x.weekly?' checked':'')+'><span>Si ripete ogni settimana</span></label>'
+     +'<label class="checkline"><input type="checkbox" name="weekly"'+(x&&x.weekly?' checked':'')+'><span>Si ripete ogni settimana</span></label>'+essField(x)
      +'<label class="l">Nota <span class="hint">facoltativa</span><input class="field" name="note" maxlength="160" value="'+esc(x&&x.note)+'" placeholder="Es. portare i documenti"></label>'
      +footer(e)+'</form>';
   }else if(kind==='goals'){
@@ -1081,6 +1158,7 @@ function submitForm(form){
   const title=String(fd.get('title')||'').trim();if(!title)return;
   base.title=title;base.id=id||uid();delete base.example;
   const days=fd.getAll('days').map(Number);
+  if(kind==='routine'||kind==='reqs'||kind==='events')base.essential=fd.get('essential')==='on';
   if(kind==='routine'){base.time=String(fd.get('time')||'');base.part=String(fd.get('part')||'mattina');base.days=days.length?days:ALLDAYS.slice();if(!id)base.order=D.routine.length}
   else if(kind==='reqs'){base.target=Math.max(1,Math.min(50,parseInt(fd.get('target'),10)||1));base.unit=String(fd.get('unit')||'').trim();base.days=days.length?days:ALLDAYS.slice();base.describe=fd.get('describe')==='on';base.prompt=String(fd.get('prompt')||'').trim()}
   else if(kind==='events'){base.date=String(fd.get('date')||S.date);base.time=String(fd.get('time')||'');base.weekly=fd.get('weekly')==='on';base.note=String(fd.get('note')||'').trim()}
@@ -1095,11 +1173,11 @@ function submitForm(form){
   }
   saveItem(kind,base);closeSheet();toast(id?'Modificato':'Aggiunto');
 }
-function openItemMenu(kind,id){
-  const x=D[kind].find(i=>i.id===id);if(!x)return;const v=S.day.done[id];
-  openSheet('<h2>'+esc(x.title)+'</h2><div class="menu">'
-    +(v==='s'?'<button class="btn" data-act="unskip" data-id="'+esc(id)+'">Rimetti nella giornata</button>':'<button class="btn" data-act="skip" data-id="'+esc(id)+'">Salta per oggi</button>')
-    +'<button class="btn" data-act="edit" data-kind="'+kind+'" data-id="'+esc(id)+'">Modifica'+(kind==='routine'?' (vale per tutti i giorni)':'')+'</button>'
+function openItemMenu(kind,id,itemId){
+  const x=D[kind].find(i=>i.id===id);if(!x)return;itemId=itemId||id;const v=S.day.done[itemId];
+  openSheet('<h2>'+esc(x.title||x.name)+'</h2><div class="menu">'
+    +(v==='s'?'<button class="btn" data-act="unskip" data-id="'+esc(itemId)+'">Rimetti nella giornata</button>':'<button class="btn" data-act="skip" data-id="'+esc(itemId)+'">Salta per oggi</button>')
+    +(kind==='meds'?'<button class="btn" data-act="med-edit" data-id="'+esc(id)+'">Modifica la medicina</button>':'<button class="btn" data-act="edit" data-kind="'+kind+'" data-id="'+esc(id)+'">Modifica'+(kind==='routine'?' (vale per tutti i giorni)':'')+'</button>')
     +'<button class="btn ghost" data-act="close">Chiudi</button></div>');
 }
 function openChooser(){
@@ -1108,11 +1186,100 @@ function openChooser(){
     +'<button class="choice" data-act="new" data-kind="events"><b>Impegno</b><span>Con giorno e orario</span></button>'
     +'<button class="choice" data-act="new" data-kind="goals"><b>Obiettivo</b><span>Con o senza scadenza</span></button>'
     +'<button class="choice" data-act="weed-new"><b>Una canna</b><span>Con quantità e motivo</span></button>'
+    +'<button class="choice" data-act="med-new"><b>Medicina</b><span>A un orario o dopo un pasto</span></button>'
     +'<button class="choice" data-act="course-new"><b>Corso di studio</b><span>Con il programma</span></button>'
     +'<button class="choice" data-act="new" data-kind="routine"><b>Routine</b><span>Si ripete nei giorni scelti</span></button>'
     +'<button class="choice" data-act="new" data-kind="reqs"><b>Requisito</b><span>Da raggiungere ogni giorno</span></button>'
     +'</div><div class="foot"><div class="r"><button class="btn ghost" data-act="close">Chiudi</button></div></div>');
 }
+function essField(x){return '<label class="checkline"><input type="checkbox" name="essential"'+(x&&x.essential?' checked':'')+'><span>Fondamentale<span class="hint">Resta anche quando stai male, come colazione, pranzo e cena.</span></span></label>'}
+function essentialCount(){return D.routine.filter(r=>r.essential).length+D.reqs.filter(r=>r.essential).length+D.events.filter(e=>e.essential).length}
+const SYMS=['Febbre','Raffreddore','Influenza','Mal di gola','Mal di testa','Mal di pancia','Dolori','Molto stanco'];
+function openSick(){const s=S.day.sick||{};const lv=s.level||'medio';
+  openSheet('<h2>Come stai?</h2><form class="form" id="f-sick">'
+    +'<div class="l"><span style="font-weight:700">Cosa hai <span class="hint">anche più di una cosa</span></span><div class="chipset">'+SYMS.map(x=>'<label><input type="checkbox" name="sym" value="'+esc(x)+'"'+(arr(s.sym).includes(x)?' checked':'')+'><span>'+esc(x)+'</span></label>').join('')+'</div></div>'
+    +'<label class="l">Altro <span class="hint">facoltativo</span><input class="field" name="what" maxlength="80" value="'+esc(s.what)+'"></label>'
+    +'<div class="l"><span style="font-weight:700">Quanto stai male</span><div class="radios">'
+    +[['lieve','Lieve'],['medio','Medio'],['alto','Alto']].map(([v,l])=>'<label style="align-items:flex-start;flex-wrap:nowrap"><input type="radio" name="level" value="'+v+'"'+(lv===v?' checked':'')+'><span><b>'+l+'</b><span class="hint" style="display:block">'+SICK_TXT[v]+'</span></span></label>').join('')+'</div></div>'
+    +'<label class="l">Temperatura <span class="hint">facoltativa</span><input class="field" name="temp" inputmode="decimal" placeholder="es. 38,2" value="'+esc(s.temp)+'" style="max-width:140px"></label>'
+    +(essentialCount()?'':'<div class="preview orange">Non hai ancora scelto le cose fondamentali: con livello medio o alto restano solo le medicine.<br><button type="button" class="btn small" data-act="ess-open" style="margin-top:8px">Scegli le cose fondamentali</button></div>')
+    +'<div class="foot">'+(S.day.sick?'<button type="button" class="btn small ghost" data-act="sick-off">Non sto più male</button>':'')+'<div class="r"><button type="button" class="btn ghost" data-act="close">Annulla</button><button type="submit" class="btn primary">Salva</button></div></div></form>');
+}
+function sortedRoutine(){return D.routine.map(x=>({...x,part:partOfTime(x.time)||x.part||'mattina'})).sort((a,b)=>PORDER[a.part]-PORDER[b.part]||(a.time?0:1)-(b.time?0:1)||(a.time||'').localeCompare(b.time||''))}
+function openEssentials(){
+  const tk=todayKey();const r=sortedRoutine();const ev=D.events.filter(e=>e.weekly||e.date>=tk);
+  const row=(kind,x,meta)=>'<label class="checkline ess"><input type="checkbox" name="ess" value="'+kind+':'+esc(x.id)+'"'+(x.essential?' checked':'')+'><span>'+esc(x.title)+'<span class="hint">'+esc(meta)+'</span></span></label>';
+  openSheet('<h2>Cose fondamentali</h2><p class="muted">Quando stai male (livello medio o alto) restano solo queste, insieme alle medicine.</p><form class="form" id="f-ess">'
+    +(r.length?'<div class="l"><span style="font-weight:700">Routine</span>'+r.map(x=>row('routine',x,(x.time?x.time+' · ':PLABEL[x.part]+' · ')+daysText(x.days))).join('')+'</div>':'<p class="note">Nessun passo nella routine.</p>')
+    +(D.reqs.length?'<div class="l"><span style="font-weight:700">Requisiti</span>'+D.reqs.map(x=>row('reqs',x,daysText(x.days))).join('')+'</div>':'')
+    +(ev.length?'<div class="l"><span style="font-weight:700">Impegni</span>'+ev.map(x=>row('events',x,x.weekly?'ogni '+DLONG[wd(x.date)].toLowerCase():shortDate(x.date))).join('')+'</div>':'')
+    +footer(false)+'</form>');
+}
+/* medicine: ogni medicina ha uno o più momenti, a un orario oppure subito dopo un evento della routine */
+function refOptions(sel){
+  return sortedRoutine().map(x=>'<option value="'+esc(x.id)+'"'+(x.id===sel?' selected':'')+'>'+esc(x.title)+(x.time?' ('+x.time+')':'')+'</option>').join('')
+    +D.events.filter(e=>e.weekly).map(x=>'<option value="'+esc(x.id)+'"'+(x.id===sel?' selected':'')+'>'+esc(x.title)+' (impegno)</option>').join('')}
+function slotRow(s){s=s||{type:'time',time:''};const after=s.type==='after';
+  return '<div class="slot" data-sid="'+esc(s.id||uid())+'"><select class="s-type" aria-label="Come"><option value="time"'+(after?'':' selected')+'>Alle ore</option><option value="after"'+(after?' selected':'')+'>Dopo</option></select>'
+    +'<input type="time" class="field s-time" value="'+esc(s.time||'')+'" aria-label="Orario"'+(after?' hidden':'')+'>'
+    +'<select class="s-ref" aria-label="Dopo quale evento"'+(after?'':' hidden')+'>'+refOptions(s.ref)+'</select>'
+    +'<button type="button" class="x" data-act="slot-del" aria-label="Togli questo momento">'+IC.x+'</button></div>'}
+function medSlotsText(m){return arr(m.slots).map(s=>{if(s.type==='after'){const x=D.routine.find(r=>r.id===s.ref)||D.events.find(e=>e.id===s.ref);return 'dopo '+(x?x.title:'evento eliminato')}return s.time}).join(', ')}
+function openMed(id){const m=id?D.meds.find(x=>x.id===id):null;
+  openSheet('<h2>'+(m?'Modifica medicina':'Nuova medicina')+'</h2><form class="form" id="f-med">'
+    +'<label class="l">Nome<input class="field" name="name" required maxlength="80" autofocus value="'+esc(m&&m.name)+'" placeholder="Es. Tachipirina"></label>'
+    +'<label class="l">Dose <span class="hint">facoltativa</span><input class="field" name="dose" maxlength="60" value="'+esc(m&&m.dose)+'" placeholder="Es. 1 compressa da 1000 mg"></label>'
+    +'<div class="l"><span style="font-weight:700">Quando prenderla <span class="hint">a un orario preciso o subito dopo un evento della routine</span></span><div id="slots" class="stack-s">'+(m?arr(m.slots):[{type:'time',time:'08:00'}]).map(slotRow).join('')+'</div><button type="button" class="btn small" data-act="slot-add" style="align-self:flex-start">+ Un altro momento</button></div>'
+    +daysField(m&&m.days)
+    +'<div class="row2"><label class="l">Dal<input class="field" type="date" name="start" value="'+esc(m?m.start||'':todayKey())+'"></label><label class="l">Fino al <span class="hint">facoltativo</span><input class="field" type="date" name="end" value="'+esc(m&&m.end)+'"></label></div>'
+    +'<label class="l">Nota <span class="hint">facoltativa</span><input class="field" name="note" maxlength="120" value="'+esc(m&&m.note)+'" placeholder="Es. a stomaco pieno"></label>'
+    +footer(!!m,'med-del')+'</form>',{med:id||null});
+}
+function submitMed(f){
+  const fd=new FormData(f);const name=String(fd.get('name')||'').trim();if(!name)return;
+  const slots=[...f.querySelectorAll('.slot')].map(r=>{const type=r.querySelector('.s-type').value;
+    return type==='after'?{id:r.dataset.sid,type,ref:r.querySelector('.s-ref').value}:{id:r.dataset.sid,type:'time',time:r.querySelector('.s-time').value}});
+  if(!slots.length){toast('Aggiungi almeno un momento.');return}
+  if(slots.some(s=>s.type==='time'&&!s.time)){toast('Scegli l\'orario di ogni momento.');return}
+  if(slots.some(s=>s.type==='after'&&!s.ref)){toast('Scegli dopo quale evento.');return}
+  const days=fd.getAll('days').map(Number);const id=sheetCtx.med;
+  const m={id:id||uid(),name,dose:String(fd.get('dose')||'').trim(),slots,days:days.length?days:ALLDAYS.slice(),start:String(fd.get('start')||'')||null,end:String(fd.get('end')||'')||null,note:String(fd.get('note')||'').trim()};
+  if(m.end&&m.start&&m.end<m.start){toast('La data di fine è prima di quella d\'inizio.');return}
+  closeSheet();saveItem('meds',m);toast(id?'Medicina modificata':'Medicina aggiunta');
+}
+/* più canne insieme: una riga per canna, ognuna con ora, grammi e motivo */
+function wmRow(r){r=r||{};
+  return '<div class="wmrow"><div class="wm-top"><input type="time" class="field wm-time" value="'+esc(r.time||'')+'" aria-label="Ora"><input class="field wm-g" inputmode="decimal" value="'+esc(r.g!=null?fmtGn(r.g):'')+'" placeholder="g" aria-label="Grammi"><span class="wm-u">g</span><button type="button" class="x" data-act="wm-del" aria-label="Togli questa riga">'+IC.x+'</button></div>'
+    +'<select class="wm-r" aria-label="Motivo"><option value="">Motivo (facoltativo)</option>'+REASONS.map(x=>'<option'+(x===r.reason?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div>'}
+function openWeedMulti(){const l=lastWeed();const g=l?+l.grams:D.weed.defaultGrams;const reason=l?arr(l.reasons)[0]||'':'';
+  const now=hmToMin(nowHM());const t1=Math.max(0,now-120);const hm=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+  openSheet('<h2>Segna più canne</h2><p class="muted">Una riga per canna. "+ Un\'altra" copia quantità e motivo della riga precedente, un\'ora dopo.</p><form class="form" id="f-wmulti">'
+    +'<label class="l">Giorno<input class="field" type="date" name="date" value="'+todayKey()+'"></label>'
+    +'<div id="wm-rows" class="stack-s">'+wmRow({time:hm(t1),g,reason})+wmRow({time:hm(now),g,reason})+'</div>'
+    +'<button type="button" class="btn small" data-act="wm-add" style="align-self:flex-start">+ Un\'altra</button>'
+    +'<div class="preview" id="wm-prev"></div>'+footer(false)+'</form>');
+  wmPreview();
+}
+function wmVals(){const f=$('#f-wmulti');if(!f)return null;const date=String(new FormData(f).get('date')||todayKey());
+  const rows=[...f.querySelectorAll('.wmrow')].map(r=>({time:r.querySelector('.wm-time').value,g:parseNum(r.querySelector('.wm-g').value),reason:r.querySelector('.wm-r').value}));
+  return {date,rows}}
+function wmPreview(){const v=wmVals();const p=$('#wm-prev');if(!v||!p)return;
+  if(!v.rows.length){p.className='preview';p.textContent='Aggiungi almeno una riga.';return}
+  if(v.rows.some(r=>!isFinite(r.g)||r.g<0)){p.className='preview';p.textContent='Scrivi i grammi in ogni riga, per esempio 0,3.';return}
+  const tot=v.rows.reduce((s,r)=>s+r.g,0);const imp=weedImpact(v.date,tot,[],v.rows.length>1);
+  p.className='preview '+imp.cls;p.textContent=v.rows.length+(v.rows.length===1?' canna':' canne')+', in tutto '+fmtG(tot)+'. '+imp.msg}
+function submitWeedMulti(){const v=wmVals();if(!v)return;
+  if(!v.rows.length){toast('Aggiungi almeno una riga.');return}
+  if(v.rows.some(r=>!r.time)){toast('Scegli l\'ora di ogni canna.');return}
+  if(v.rows.some(r=>!isFinite(r.g)||r.g<0||r.g>50)){toast('Scrivi i grammi in ogni riga, per esempio 0,3.');return}
+  v.rows.forEach(r=>D.weed.log.push({id:uid(),ts:v.date+'T'+r.time,date:v.date,grams:r2(r.g),est:false,reasons:r.reason?[r.reason]:[],note:''}));
+  persist();closeSheet();C={};const d=weedDay(v.date);render();
+  toast(v.rows.length+(v.rows.length===1?' segnata.':' segnate.')+(d.status==='red'?' Sei sopra il tetto della settimana.':d.status==='orange'?' Quel giorno sei sopra la quota.':''))}
+function weedRepeat(){const l=lastWeed();if(!l)return;const ts=nowLocal();
+  const e={id:uid(),ts,date:ts.slice(0,10),grams:+l.grams||0,est:!!l.est,reasons:arr(l.reasons).slice(),note:''};
+  D.weed.log.push(e);persist();C={};const d=weedDay(e.date);render();
+  toast('Segnata: '+fmtG(e.grams)+(d.status==='red'?' · sopra il tetto':d.status==='orange'?' · sopra la quota di oggi':''),'Annulla',()=>{D.weed.log=D.weed.log.filter(x=>x.id!==e.id);persist();render()})}
+
 /* descrizione di una voce di un requisito: i = posizione; isNew = sto aggiungendo una voce */
 function openNote(r,i,isNew){
   const t=Math.max(1,+r.target||1);const cur=arr(S.day.notes[r.id])[i]||'';
@@ -1201,18 +1368,20 @@ function weedFormVals(){const f=$('#f-weed');if(!f)return null;const fd=new Form
 function weedPreview(){
   const v=weedFormVals();const p=$('#w-prev');if(!v||!p)return;
   if(!isFinite(v.g)||v.g<0){p.className='preview';p.textContent='Scrivi i grammi o spunta "Non so".';return}
-  const mon=wkStart(v.date);const limit=limitFor(mon);
-  if(limit==null){p.className='preview';p.textContent='Nessun tetto per questa settimana: la canna viene solo registrata.';return}
-  const m={};D.weed.log.forEach(e=>{if(e.id!==sheetCtx.weed)m[e.date]=(m[e.date]||0)+(+e.grams||0)});
-  let used=0,allow=0;const i=widx(v.date);for(let j=0;j<7;j++){const k=addDays(mon,j);if(j===i)allow=Math.max(0,(limit-used)/(7-j));used+=(m[k]||0)}
+  const r=weedImpact(v.date,v.g,[sheetCtx.weed],false);p.className='preview '+r.cls;p.textContent=r.msg;
+}
+/* effetto sul tetto di aggiungere addG grammi nel giorno date (escludendo le voci in modifica) */
+function weedImpact(date,addG,excludeIds,plural){
+  const mon=wkStart(date);const limit=limitFor(mon);const q=plural?'queste':'questa';
+  if(limit==null)return {cls:'',msg:'Nessun tetto per questa settimana: '+(plural?'vengono solo registrate.':'viene solo registrata.')};
+  const ex=new Set(arr(excludeIds).filter(Boolean));const m={};D.weed.log.forEach(e=>{if(!ex.has(e.id))m[e.date]=(m[e.date]||0)+(+e.grams||0)});
+  let used=0,allow=0;const i=widx(date);for(let j=0;j<7;j++){const k=addDays(mon,j);if(j===i)allow=Math.max(0,(limit-used)/(7-j));used+=(m[k]||0)}
   let before=0;for(let j=0;j<i;j++)before+=(m[addDays(mon,j)]||0);
-  const dayUsed=(m[v.date]||0)+v.g;const weekUsed=used+v.g;const rest=limit-weekUsed;
+  const dayUsed=(m[date]||0)+addG;const weekUsed=used+addG;const rest=limit-weekUsed;
   const daysLeft=6-i;const next=daysLeft>0?Math.max(0,(limit-before-dayUsed)/daysLeft):0;
-  let cls='',msg;
-  if(weekUsed>limit+1e-9){cls='red';msg='Con questa superi il tetto della settimana di '+fmtG(-rest)+'.'}
-  else if(dayUsed>allow+1e-9){cls='orange';msg='Con questa superi la quota di oggi ('+fmtG(allow)+'). Restano '+fmtG(rest)+' per la settimana'+(daysLeft>0?': circa '+fmtG(next)+' al giorno nei prossimi '+daysLeft+' giorni.':'.')}
-  else msg='Dopo questa: restano '+fmtG(rest)+' per la settimana'+(daysLeft>0?', circa '+fmtG(next)+' al giorno nei prossimi '+daysLeft+' giorni.':'.');
-  p.className='preview '+cls;p.textContent=msg;
+  if(weekUsed>limit+1e-9)return {cls:'red',msg:'Con '+q+' superi il tetto della settimana di '+fmtG(-rest)+'.'};
+  if(dayUsed>allow+1e-9)return {cls:'orange',msg:'Con '+q+' superi la quota del giorno ('+fmtG(allow)+'). Restano '+fmtG(rest)+' per la settimana'+(daysLeft>1?': circa '+fmtG(next)+' al giorno nei prossimi '+daysLeft+' giorni.':daysLeft===1?': '+fmtG(next)+' per domani.':'.')};
+  return {cls:'',msg:'Dopo '+q+': restano '+fmtG(rest)+' per la settimana'+(daysLeft>1?', circa '+fmtG(next)+' al giorno nei prossimi '+daysLeft+' giorni.':daysLeft===1?', cioè '+fmtG(next)+' per domani.':'.')};
 }
 function submitWeed(){
   const v=weedFormVals();if(!v)return;if(!isFinite(v.g)||v.g<0||v.g>50){toast('Scrivi una quantità valida, per esempio 0,3.');return}
@@ -1307,7 +1476,24 @@ const ACT={
   toggle(b){const id=b.dataset.id;const d=S.day.done;if(d[id]===true)delete d[id];else d[id]=true;closeSheet();touchDay()},
   skip(b){S.day.done[b.dataset.id]='s';closeSheet();touchDay();toast('Saltato per oggi. Va bene così.')},
   unskip(b){delete S.day.done[b.dataset.id];closeSheet();touchDay()},
-  itemmenu(b){openItemMenu(b.dataset.kind,b.dataset.id)},
+  itemmenu(b){openItemMenu(b.dataset.kind,b.dataset.id,b.dataset.item)},
+  sick(){openSick()},
+  'sick-off'(){S.day.sick=null;S.day.sickCheck='ok';closeSheet();touchDay();toast('Bene! La giornata torna completa.')},
+  'sick-again'(){const y=D.days[addDays(S.date,-1)];if(y&&y.sick){S.day.sick=clone(y.sick);delete S.day.sick.temp;touchDay()}},
+  'sick-ok'(){S.day.sickCheck='ok';touchDay()},
+  'ess-open'(){openEssentials()},
+  'med-new'(){openMed(null)},
+  'med-edit'(b){openMed(b.dataset.id)},
+  'med-del'(b){if(!arm(b))return;const id=sheetCtx.med;closeSheet();removeItem('meds',id);toast('Medicina eliminata')},
+  'slot-add'(){const s=$('#slots');if(s)s.insertAdjacentHTML('beforeend',slotRow())},
+  'slot-del'(b){const s=$('#slots');if(s&&s.children.length>1)b.closest('.slot').remove();else toast('Serve almeno un momento.')},
+  'weed-multi'(){openWeedMulti()},
+  'weed-repeat'(){weedRepeat()},
+  'wm-add'(){const box=$('#wm-rows');if(!box)return;const rows=box.querySelectorAll('.wmrow');const last=rows[rows.length-1];
+    let r={};if(last){const tt=last.querySelector('.wm-time').value;const m=tt?Math.min(23*60+59,hmToMin(tt)+60):null;
+      r={time:m==null?'':pad(Math.floor(m/60))+':'+pad(m%60),g:parseNum(last.querySelector('.wm-g').value),reason:last.querySelector('.wm-r').value};if(!isFinite(r.g))r.g=null}
+    box.insertAdjacentHTML('beforeend',wmRow(r));wmPreview()},
+  'wm-del'(b){b.closest('.wmrow').remove();wmPreview()},
   'req-inc'(b){const r=D.reqs.find(x=>x.id===b.dataset.id);if(!r)return;const t=Math.max(1,+r.target||1);const c=+S.day.req[r.id]||0;if(c>=t)return;
     if(r.describe){openNote(r,c,true);return}
     S.day.req[r.id]=c+1;touchDay();if(c+1===t)toast(r.title+': fatto!')},
@@ -1407,6 +1593,13 @@ document.addEventListener('submit',ev=>{
     if(!(min>0&&min<=1440)){toast('Scrivi i minuti, per esempio 30.');return}
     mutateDay(k,b=>{b.study=obj(b.study);b.study[c]=(+b.study[c]||0)+min});closeSheet();render();toast(min+' min aggiunti');return}
   if(f.id==='f-weed'){submitWeed();return}
+  if(f.id==='f-wmulti'){submitWeedMulti();return}
+  if(f.id==='f-med'){submitMed(f);return}
+  if(f.id==='f-sick'){const fd=new FormData(f);const level=String(fd.get('level')||'medio');
+    S.day.sick={level,sym:fd.getAll('sym').map(String),what:String(fd.get('what')||'').trim(),temp:String(fd.get('temp')||'').trim()};S.day.sickCheck=null;
+    closeSheet();touchDay();toast(level==='lieve'?'Segnato. Vai con calma oggi.':'Segnato. Restano solo le cose fondamentali.');return}
+  if(f.id==='f-ess'){const sel=new Set(new FormData(f).getAll('ess').map(String));
+    ['routine','reqs','events'].forEach(k=>D[k].forEach(x=>{x.essential=sel.has(k+':'+x.id)}));commit();closeSheet();render();toast('Cose fondamentali salvate: '+sel.size);return}
   if(f.id==='f-urge'){const fd=new FormData(f);const ts=String(fd.get('ts')||nowLocal());const id=sheetCtx.urge;
     const u={id:id||uid(),ts,date:ts.slice(0,10),reasons:fd.getAll('reasons').map(String),note:String(fd.get('note')||'').trim()};
     const i=D.weed.urges.findIndex(x=>x.id===u.id);if(i>=0)D.weed.urges[i]=u;else D.weed.urges.push(u);persist();closeSheet();render();toast(id?'Salvato':'Voglia superata segnata. Ben fatto.');return}
@@ -1426,11 +1619,14 @@ document.addEventListener('submit',ev=>{
 });
 document.addEventListener('input',ev=>{
   if(ev.target.closest('#f-weed'))weedPreview();
+  else if(ev.target.closest('#f-wmulti'))wmPreview();
   else if(ev.target.closest('#f-grad'))gradPreview();
 });
 document.addEventListener('change',ev=>{
   const t=ev.target;
   if(t.closest('#f-weed')){weedPreview();return}
+  if(t.closest('#f-wmulti')){wmPreview();return}
+  if(t.classList.contains('s-type')){const r=t.closest('.slot');r.querySelector('.s-time').hidden=t.value==='after';r.querySelector('.s-ref').hidden=t.value!=='after';return}
   if(t.id==='focus-in'){const v=t.value.trim();if(v!==S.day.focus){S.day.focus=v;touchDay()}}
   else if(t.id==='f-describe'){const w=$('#f-prompt-wrap');if(w)w.hidden=!t.checked}
   else if(t.id==='restore-in'&&t.files&&t.files[0])onRestoreFile(t.files[0]);
